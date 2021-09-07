@@ -58,7 +58,7 @@ namespace MigrationTools.Endpoints
             foreach (WorkItem wi in collection)
             {
                 WorkItemData wid = new WorkItemData { internalObject = wi };
-                tfswic.MapWorkItemtoWorkItemData(wid, wi, null);
+                tfswic.MapWorkItemToWorkItemData(wid, wi, null);
                 list.Add(wid);
             }
             return list;

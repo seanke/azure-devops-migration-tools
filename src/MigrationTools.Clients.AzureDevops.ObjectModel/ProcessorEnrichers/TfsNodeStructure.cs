@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Xml;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -121,6 +122,8 @@ namespace MigrationTools.Enrichers
             {
                 newNodeName = newNodeName.Remove(newNodeName.IndexOf($@"{nodeStructureType}"), $@"{nodeStructureType}".Length);
             }
+
+            newNodeName = newNodeName.Replace(@"\\", @"\");
             return newNodeName;
         }
 
@@ -219,7 +222,7 @@ namespace MigrationTools.Enrichers
             {
                 try
                 {
-                    ((ICommonStructureService4)_targetCommonStructureService).SetIterationDates(node.Uri, startDate, finishDate);
+                    (_targetCommonStructureService).SetIterationDates(node.Uri, startDate, finishDate);
                     Log.LogDebug("  Node {node} has been assigned {startDate} / {finishDate}", nodePath, startDate, finishDate);
                 }
                 catch (CommonStructureSubsystemException ex)
@@ -232,40 +235,46 @@ namespace MigrationTools.Enrichers
 
         private void CreateNodes(XmlNodeList nodeList, NodeInfo parentPath, string treeType)
         {
-            foreach (XmlNode item in nodeList)
-            {
-                string newNodeName = item.Attributes["Name"].Value;
-
-                if (!ShouldCreateNode(parentPath, newNodeName))
+            var tasks = (from XmlNode item in nodeList
+                select new Task(() =>
                 {
-                    continue;
-                }
+                    string newNodeName = item.Attributes["Name"].Value;
 
-                NodeInfo targetNode;
-                if (treeType == "Iteration")
-                {
-                    DateTime? startDate = null;
-                    DateTime? finishDate = null;
-                    if (item.Attributes["StartDate"] != null)
+                    if (!ShouldCreateNode(parentPath, newNodeName))
                     {
-                        startDate = DateTime.Parse(item.Attributes["StartDate"].Value);
-                    }
-                    if (item.Attributes["FinishDate"] != null)
-                    {
-                        finishDate = DateTime.Parse(item.Attributes["FinishDate"].Value);
+                        return;
                     }
 
-                    targetNode = CreateNode(newNodeName, parentPath, startDate, finishDate);
-                }
-                else
-                {
-                    targetNode = CreateNode(newNodeName, parentPath, null, null);
-                }
-                if (item.HasChildNodes)
-                {
-                    CreateNodes(item.ChildNodes[0].ChildNodes, targetNode, treeType);
-                }
-            }
+                    NodeInfo targetNode;
+                    if (treeType == "Iteration")
+                    {
+                        DateTime? startDate = null;
+                        DateTime? finishDate = null;
+                        if (item.Attributes["StartDate"] != null)
+                        {
+                            startDate = DateTime.Parse(item.Attributes["StartDate"].Value);
+                        }
+
+                        if (item.Attributes["FinishDate"] != null)
+                        {
+                            finishDate = DateTime.Parse(item.Attributes["FinishDate"].Value);
+                        }
+
+                        targetNode = CreateNode(newNodeName, parentPath, startDate, finishDate);
+                    }
+                    else
+                    {
+                        targetNode = CreateNode(newNodeName, parentPath, null, null);
+                    }
+
+                    if (item.HasChildNodes)
+                    {
+                        CreateNodes(item.ChildNodes[0].ChildNodes, targetNode, treeType);
+                    }
+                })).ToList();
+
+            tasks.ForEach(x=>x.Start());
+            Task.WhenAll(tasks).Wait();
         }
 
         private void MigrateAllNodeStructures()

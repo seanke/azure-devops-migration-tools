@@ -12,7 +12,7 @@ namespace MigrationTools.Endpoints
    public class TfsWorkItemConvertor
     {
 
-        public void MapWorkItemtoWorkItemData(WorkItemData context_wid, WorkItem context_wi, Dictionary<string, FieldItem> fieldsOfRevision = null)
+        public void MapWorkItemToWorkItemData(WorkItemData context_wid, WorkItem context_wi, Dictionary<string, FieldItem> fieldsOfRevision = null)
         {
             context_wid.Id = context_wi.Id.ToString();
             context_wid.Title = fieldsOfRevision != null ? fieldsOfRevision["System.Title"].ToString() : context_wi.Title;

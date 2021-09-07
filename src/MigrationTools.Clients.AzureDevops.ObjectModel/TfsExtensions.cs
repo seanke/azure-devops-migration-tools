@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IdentityModel.Tokens;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.TeamFoundation.WorkItemTracking.Client;
+using Microsoft.VisualStudio.Services.Common;
 using MigrationTools._EngineV1.Configuration;
 using MigrationTools._EngineV1.DataContracts;
 using MigrationTools.DataContracts;
@@ -14,31 +17,6 @@ namespace MigrationTools
 {
     public static class TfsExtensions
     {
-        //public static IServiceCollection TfsObjectModelWorkerServices(this IServiceCollection collection, EngineConfiguration config)
-        //{
-        //    if (collection == null) throw new ArgumentNullException(nameof(collection));
-        //    if (config == null) throw new ArgumentNullException(nameof(config));
-
-        //   // return collection.AddTransient<IWorkItemSink, AzureDevOpsWorkItemSink>();
-        //}
-
-        //public static void SaveWorkItem(this IProcessor context, WorkItem workItem)
-        //{
-        //    if (workItem == null) throw new ArgumentNullException(nameof(workItem));
-        //    workItem.Fields["System.ChangedBy"].Value = "Migration";
-        //    workItem.Save();
-        //}
-
-        public static Dictionary<string, object> AsDictionary(this FieldCollection col)
-        {
-            var dict = new Dictionary<string, object>();
-            for (var ix = 0; ix < col.Count; ix++)
-            {
-                dict.Add(col[ix].ReferenceName, col[ix].Value);
-            }
-            return dict;
-        }
-
         public static TfsTeamProjectConfig AsTeamProjectConfig(this IMigrationClientConfig context)
         {
             return (TfsTeamProjectConfig)context;
@@ -74,7 +52,7 @@ namespace MigrationTools
         {
             var workItem = (WorkItem)context.internalObject;
             TfsWorkItemConvertor tfswic = new TfsWorkItemConvertor();
-            tfswic.MapWorkItemtoWorkItemData(context, workItem, fieldsOfRevision);
+            tfswic.MapWorkItemToWorkItemData(context, workItem, fieldsOfRevision);
         }
 
         public static void SaveToAzureDevOps(this WorkItemData context)
@@ -164,22 +142,20 @@ namespace MigrationTools
 
         public static List<WorkItemData> ToWorkItemDataList(this IList<WorkItem> collection)
         {
-            List<WorkItemData> list = new List<WorkItemData>();
-            foreach (WorkItem wi in collection)
+            var tasks = new List<Task<WorkItemData>>();
+
+            for (var i = 0; i < collection.Count; i++)
             {
-                list.Add(wi.AsWorkItemData());
+                var ii = i;
+                var task = new Task<WorkItemData>(() => collection[ii].AsWorkItemData());
+                tasks.Add(task);
             }
-            return list;
+            //TODO make this run async. There is some code in here cause async issues.
+            tasks.ForEach(x=>x.RunSynchronously());
+            var results = Task.WhenAll(tasks).Result;
+
+            return results.ToList();
         }
 
-        public static List<WorkItemData> ToWorkItemDataList(this WorkItemCollection collection)
-        {
-            List<WorkItemData> list = new List<WorkItemData>();
-            foreach (WorkItem wi in collection)
-            {
-                list.Add(wi.AsWorkItemData());
-            }
-            return list;
-        }
     }
 }

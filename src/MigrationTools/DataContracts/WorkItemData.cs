@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using Newtonsoft.Json;
 
 namespace MigrationTools.DataContracts
@@ -31,34 +33,5 @@ namespace MigrationTools.DataContracts
         public string Title { get; set; }
         public string Type { get; set; }
         public List<LinkItem> Links { get; set; }
-
-        //private object GetField(string field)
-        //{
-        //    if (Fields is null)
-        //    {
-        //        this.Fields = new Dictionary<string, object>();
-        //    }
-        //    if (!this.Fields.ContainsKey(field))
-        //    {
-        //        return default;
-        //    }
-        //    return this.Fields[field];
-        //}
-
-        //private void SetField<T>(string field, T value)
-        //{
-        //    if (Fields is null)
-        //    {
-        //        this.Fields = new Dictionary<string, object>();
-        //    }
-        //    if (this.Fields.ContainsKey(field))
-        //    {
-        //        this.Fields[field] = value;
-        //    }
-        //    else
-        //    {
-        //        this.Fields.Add(field, value);
-        //    }
-        //}
     }
 }

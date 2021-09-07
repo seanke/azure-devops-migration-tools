@@ -174,14 +174,12 @@ namespace MigrationTools.Enrichers
             {
                 targetWorkItem.ToWorkItem().Attachments.Add(new Attachment(filePath, "History has been consolidated into the attached file."));
             }
-                
 
-                Log.LogInformation(" Attached a consolidated set of {RevisionCount} revisions.",
-                    new Dictionary<string, object>() {
-                            {"RevisionCount", sourceWorkItem.Revisions.Count() }
-                    });
-
+            Log.LogInformation(" Attached a consolidated set of {RevisionCount} revisions.",
+                new Dictionary<string, object>()
+                {
+                    { "RevisionCount", sourceWorkItem.Revisions.Count() }
+                });
         }
-
     }
 }

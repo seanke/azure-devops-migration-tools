@@ -16,6 +16,7 @@ namespace MigrationTools.Tests
             services.AddMigrationToolServices();
             services.AddMigrationToolServicesForClientAzureDevOpsObjectModel(configuration);
             services.AddMigrationToolServicesForClientLegacyAzureDevOpsObjectModel();
+
             AddTfsEndpoint(services, "Source", "migrationSource1");
             AddTfsEndpoint(services, "Target", "migrationTarget1");
 

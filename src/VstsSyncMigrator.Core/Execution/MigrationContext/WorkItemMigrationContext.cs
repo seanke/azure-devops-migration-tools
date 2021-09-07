@@ -6,12 +6,15 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.Client;
 using Microsoft.TeamFoundation.WorkItemTracking.Proxy;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
+using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using MigrationTools;
 using MigrationTools._EngineV1.Clients;
@@ -137,29 +140,31 @@ namespace VstsSyncMigrator.Engine
             _count = sourceWorkItems.Count;
             _elapsedms = 0;
             _totalWorkItem = sourceWorkItems.Count;
-            foreach (WorkItemData sourceWorkItemData in sourceWorkItems)
-            {
-                var sourceWorkItem = TfsExtensions.ToWorkItem(sourceWorkItemData);
-                workItemLog = contextLog.ForContext("SourceWorkItemId", sourceWorkItem.Id);
-                using (LogContext.PushProperty("sourceWorkItemTypeName", sourceWorkItem.Type.Name))
-                using (LogContext.PushProperty("currentWorkItem", _current))
-                using (LogContext.PushProperty("totalWorkItems", _totalWorkItem))
-                using (LogContext.PushProperty("sourceWorkItemId", sourceWorkItem.Id))
-                using (LogContext.PushProperty("sourceRevisionInt", sourceWorkItem.Revision))
-                using (LogContext.PushProperty("targetWorkItemId", null))
+
+            var tasks = sourceWorkItems.Select(sourceWorkItemData => new Task(() =>
                 {
-                    ProcessWorkItem(sourceWorkItemData, _config.WorkItemCreateRetryLimit);
-                    if (_config.PauseAfterEachWorkItem)
+                    var sourceWorkItem = sourceWorkItemData.ToWorkItem();
+                    workItemLog = contextLog.ForContext("SourceWorkItemId", sourceWorkItem.Id);
+                    using (LogContext.PushProperty("sourceWorkItemTypeName", sourceWorkItem.Type.Name))
+                    using (LogContext.PushProperty("currentWorkItem", _current))
+                    using (LogContext.PushProperty("totalWorkItems", _totalWorkItem))
+                    using (LogContext.PushProperty("sourceWorkItemId", sourceWorkItem.Id))
+                    using (LogContext.PushProperty("sourceRevisionInt", sourceWorkItem.Revision))
+                    using (LogContext.PushProperty("targetWorkItemId", null))
                     {
+                        ProcessWorkItem(sourceWorkItemData, _config.WorkItemCreateRetryLimit);
+                        if (!_config.PauseAfterEachWorkItem) return;
                         Console.WriteLine("Do you want to continue? (y/n)");
-                        if (Console.ReadKey().Key != ConsoleKey.Y)
-                        {
-                            workItemLog.Warning("USER ABORTED");
-                            break;
-                        }
+                        if (Console.ReadKey().Key == ConsoleKey.Y) return;
+                        workItemLog.Warning("USER ABORTED");
+                        Application.Exit();
                     }
-                }
-            }
+                }))
+                .ToList();
+
+            tasks.ForEach(x=>x.Start());
+            Task.WhenAll(tasks).Wait();
+
             //////////////////////////////////////////////////
             stopwatch.Stop();
 
