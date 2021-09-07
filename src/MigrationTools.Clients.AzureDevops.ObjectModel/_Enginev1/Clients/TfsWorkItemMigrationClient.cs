@@ -63,16 +63,20 @@ namespace MigrationTools._EngineV1.Clients
         }
 
         public override WorkItemData FindReflectedWorkItem(WorkItemData workItemToReflect, bool cache)
-
         {
-            TfsReflectedWorkItemId ReflectedWorkItemId = new TfsReflectedWorkItemId(workItemToReflect);
-            var workItemToFind = workItemToReflect.ToWorkItem();
-            WorkItem found = GetFromCache(ReflectedWorkItemId)?.ToWorkItem();
-            if (found == null) { found = FindReflectedWorkItemByReflectedWorkItemId(ReflectedWorkItemId)?.ToWorkItem(); }
-            if (found != null && cache)
+            var reflectedWorkItemId = new TfsReflectedWorkItemId(workItemToReflect);
+
+            //var workItemToFind = workItemToReflect.ToWorkItem(); //Comemented this out because I'm not sure what this does.
+            var found = GetFromCache(reflectedWorkItemId)?.ToWorkItem();
+
+            if (found == null)
             {
-                AddToCache(found.AsWorkItemData());// TODO MEMORY LEAK
+                found = FindReflectedWorkItemByReflectedWorkItemId(reflectedWorkItemId)?.ToWorkItem();
             }
+
+            if (found != null && cache)
+                AddToCache(found.AsWorkItemData()); // TODO MEMORY LEAK
+
             return found?.AsWorkItemData();
         }
 

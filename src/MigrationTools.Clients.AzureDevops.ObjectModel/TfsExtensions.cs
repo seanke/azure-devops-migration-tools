@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.IdentityModel.Tokens;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.TeamFoundation.WorkItemTracking.Client;
-using Microsoft.VisualStudio.Services.Common;
 using MigrationTools._EngineV1.Configuration;
 using MigrationTools._EngineV1.DataContracts;
 using MigrationTools.DataContracts;
@@ -39,7 +37,7 @@ namespace MigrationTools
             var wid = new WorkItemData
             {
                 // internalObject = context.internalObject
-                // TODO: Had to revert to calling revision load again untill WorkItemMigrationContext.PopulateWorkItem can be updated to pull from WorkItemData
+                // TODO: Had to revert to calling revision load again until WorkItemMigrationContext.PopulateWorkItem can be updated to pull from WorkItemData
                 internalObject = originalWi.Store.GetWorkItem(originalWi.Id, rev)
             };
 

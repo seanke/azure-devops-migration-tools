@@ -142,6 +142,20 @@ namespace VstsSyncMigrator.Engine
             _elapsedms = 0;
             _totalWorkItem = sourceWorkItems.Count;
 
+            var tasksGetReflectedItems = sourceWorkItems.Select(workItemData =>
+                new Task<WorkItemData>(() =>
+                    {
+                        contextLog?.Information("[FindReflectedWorkItem] Get sourceWorkItem {sourceWorkItem} reflected work item.", workItemData.Id);
+                        var r =  Engine.Target.WorkItems.FindReflectedWorkItem(workItemData, false);
+                        contextLog?.Information("[FindReflectedWorkItem] Retrieved sourceWorkItem {sourceWorkItem} reflected work item.", workItemData.Id);
+                       return r;
+                    }
+                )).ToList();
+
+            tasksGetReflectedItems.ForEach(x=>x.Start());
+
+            var reflectedWorkItems = Task.WhenAll(tasksGetReflectedItems.ToList()).Result;
+
             var tasks = sourceWorkItems.Select(sourceWorkItemData => new Task(() =>
                 {
                     var sourceWorkItem = sourceWorkItemData.ToWorkItem();
@@ -153,7 +167,7 @@ namespace VstsSyncMigrator.Engine
                     using (LogContext.PushProperty("sourceRevisionInt", sourceWorkItem.Revision))
                     using (LogContext.PushProperty("targetWorkItemId", null))
                     {
-                        ProcessWorkItem(sourceWorkItemData, _config.WorkItemCreateRetryLimit);
+                        ProcessWorkItem(sourceWorkItemData, reflectedWorkItems.ToList(), _config.WorkItemCreateRetryLimit);
                         if (!_config.PauseAfterEachWorkItem) return;
                         Console.WriteLine("Do you want to continue? (y/n)");
                         if (Console.ReadKey().Key == ConsoleKey.Y) return;
@@ -163,7 +177,7 @@ namespace VstsSyncMigrator.Engine
                 }))
                 .ToList();
 
-            tasks.ForEach(x=>x.Start());
+            tasks.ForEach(x=>x.RunSynchronously()); //TODO make this work with work async.
             Task.WhenAll(tasks).Wait();
 
             //////////////////////////////////////////////////
@@ -324,7 +338,6 @@ namespace VstsSyncMigrator.Engine
         {
             var oldWorkItem = oldWi.ToWorkItem();
             var newWorkItem = newwit.ToWorkItem();
-            var newWorkItemstartTime = DateTime.UtcNow;
             var fieldMappingTimer = Stopwatch.StartNew();
 
             if (newWorkItem.IsPartialOpen || !newWorkItem.IsOpen)
@@ -376,10 +389,10 @@ namespace VstsSyncMigrator.Engine
             }
         }
 
-        private void ProcessWorkItem(WorkItemData sourceWorkItem, int retryLimit = 5, int retrys = 0)
+        private void ProcessWorkItem(WorkItemData sourceWorkItem, List<WorkItemData> reflectedWorkItems, int retryLimit = 5, int retrys = 0)
         {
-            var witstopwatch = Stopwatch.StartNew();
-            var starttime = DateTime.Now;
+            var witStopWatch = Stopwatch.StartNew();
+            var startTime = DateTime.Now;
             processWorkItemMetrics = new Dictionary<string, double>();
             processWorkItemParamiters = new Dictionary<string, string>();
             AddParameter("SourceURL", processWorkItemParamiters, Engine.Source.WorkItems.Config.AsTeamProjectConfig().Collection.ToString());
@@ -393,9 +406,13 @@ namespace VstsSyncMigrator.Engine
             Log.LogDebug("######################################################################################");
             try
             {
-                if (sourceWorkItem.Type != "Test Plan" || sourceWorkItem.Type != "Test Suite")
+                if (sourceWorkItem.Type != "Test Plan" && sourceWorkItem.Type != "Test Suite")
                 {
-                    var targetWorkItem = Engine.Target.WorkItems.FindReflectedWorkItem(sourceWorkItem, false);
+                    var reflectedWorkItemId = new TfsReflectedWorkItemId(sourceWorkItem);
+
+                    //var targetWorkItem = Engine.Target.WorkItems.FindReflectedWorkItem(sourceWorkItem, false);
+                    var targetWorkItem =
+                        reflectedWorkItems.Find(x => x != null && x.Fields["Custom.ReflectedWorkItemId"].Value.ToString() == reflectedWorkItemId.ToString());
                     ///////////////////////////////////////////////
                     TraceWriteLine(LogEventLevel.Information, "Work Item has {sourceWorkItemRev} revisions and revision migration is set to {ReplayRevisions}",
                         new Dictionary<string, object>(){
@@ -473,7 +490,7 @@ namespace VstsSyncMigrator.Engine
                             {"Retrys", retrys },
                             {"RetryLimit", retryLimit }
                         });
-                    ProcessWorkItem(sourceWorkItem, retryLimit, retrys);
+                    ProcessWorkItem(sourceWorkItem, null, retryLimit, retrys);
                 }
                 else
                 {
@@ -483,11 +500,11 @@ namespace VstsSyncMigrator.Engine
             catch (Exception ex)
             {
                 Log.LogError(ex, ex.ToString());
-                Telemetry.TrackRequest("ProcessWorkItem", starttime, witstopwatch.Elapsed, "502", false);
+                Telemetry.TrackRequest("ProcessWorkItem", startTime, witStopWatch.Elapsed, "502", false);
                 throw ex;
             }
-            witstopwatch.Stop();
-            _elapsedms += witstopwatch.ElapsedMilliseconds;
+            witStopWatch.Stop();
+            _elapsedms += witStopWatch.ElapsedMilliseconds;
             processWorkItemMetrics.Add("ElapsedTimeMS", _elapsedms);
 
             var average = new TimeSpan(0, 0, 0, 0, (int)(_elapsedms / _current));
@@ -499,7 +516,7 @@ namespace VstsSyncMigrator.Engine
                     {"remaining", remaining}
                 });
             Telemetry.TrackEvent("WorkItemMigrated", processWorkItemParamiters, processWorkItemMetrics);
-            Telemetry.TrackRequest("ProcessWorkItem", starttime, witstopwatch.Elapsed, "200", true);
+            Telemetry.TrackRequest("ProcessWorkItem", startTime, witStopWatch.Elapsed, "200", true);
 
             _current++;
             _count--;
