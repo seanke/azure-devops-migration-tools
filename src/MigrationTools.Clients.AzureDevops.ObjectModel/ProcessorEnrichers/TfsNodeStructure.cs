@@ -193,9 +193,8 @@ namespace MigrationTools.Enrichers
             if (startDate != null && finishDate != null)
                 try
                 {
-                    ((ICommonStructureService4)_targetCommonStructureService).SetIterationDates(node.Uri, startDate, finishDate);
-                    Log.LogDebug("  Node {node} has been assigned {startDate} / {finishDate}", nodePath, startDate,
-                        finishDate);
+                    _targetCommonStructureService.SetIterationDates(node.Uri, startDate, finishDate);
+                    Log.LogDebug("  Node {node} has been assigned {startDate} / {finishDate}", nodePath, startDate, finishDate);
                 }
                 catch (CommonStructureSubsystemException ex)
                 {
