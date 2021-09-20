@@ -273,8 +273,15 @@ namespace VstsSyncMigrator.Engine
                 }
             }
 
-            newWorkItem.AreaPath = nodeStructureEnricher.GetNewNodeName(oldWorkItem.AreaPath, TfsNodeStructureType.Area);
-            newWorkItem.IterationPath = nodeStructureEnricher.GetNewNodeName(oldWorkItem.IterationPath, TfsNodeStructureType.Iteration);
+            var targetAreaPathMap = ((TfsMigrationClient)Engine.Target).TfsConfig.LanguageMaps.AreaPath;
+            var sourceAreaPathMap = ((TfsMigrationClient)Engine.Source).TfsConfig.LanguageMaps.AreaPath;
+
+            var targetIterationPathMap = ((TfsMigrationClient)Engine.Target).TfsConfig.LanguageMaps.IterationPath;
+            var sourceIterationPathMap = ((TfsMigrationClient)Engine.Source).TfsConfig.LanguageMaps.IterationPath;
+
+            newWorkItem.AreaPath = nodeStructureEnricher.GetNewNodeName(oldWorkItem.AreaPath, TfsNodeStructureType.Area, targetAreaPathMap, sourceAreaPathMap);
+            newWorkItem.IterationPath = nodeStructureEnricher.GetNewNodeName(oldWorkItem.IterationPath, TfsNodeStructureType.Iteration, targetIterationPathMap, sourceIterationPathMap);
+
             switch (destType)
             {
                 case "Test Case":

@@ -74,6 +74,26 @@ namespace MigrationTools.Enrichers
             throw new NotImplementedException();
         }
 
+        public static string MappedNodeName(string sourceNodeName, string sourceStructureName, string targetProjectName, string targetStructureName)
+        {
+            var sourceNodeNameWorking = sourceNodeName.Substring(sourceNodeName.IndexOf('\\'));
+            var sourceStructureNameWorking = sourceStructureName.Substring(sourceStructureName.IndexOf('\\'));
+
+            if (!sourceNodeNameWorking.StartsWith(sourceStructureNameWorking, StringComparison.OrdinalIgnoreCase))
+                throw new Exception("The work item is not in the source node. Change your query so that only work items in the source node");
+
+            sourceNodeName = sourceNodeNameWorking.Substring(sourceStructureNameWorking.Length);
+
+            var targetNodeNameWorking = targetStructureName.Substring(targetStructureName.IndexOf('\\'));
+            targetNodeNameWorking += @"\" + sourceNodeName;
+            targetNodeNameWorking = targetProjectName + @"\" + targetNodeNameWorking;
+
+            return targetNodeNameWorking
+                .Replace(@"\\", @"\")
+                .TrimEnd('\\');
+        }
+
+
         public string GetNewNodeName(string sourceNodeName, TfsNodeStructureType nodeStructureType,
             string targetStructureName = null, string sourceStructureName = null)
         {
