@@ -76,8 +76,13 @@ namespace MigrationTools.Enrichers
 
         public static string MappedNodeName(string sourceNodeName, string sourceStructureName, string targetProjectName, string targetStructureName)
         {
-            var sourceNodeNameWorking = sourceNodeName.Substring(sourceNodeName.IndexOf('\\'));
-            var sourceStructureNameWorking = sourceStructureName.Substring(sourceStructureName.IndexOf('\\'));
+            var sourceNodeNameWorking = sourceNodeName.Contains("\\")
+                ? sourceNodeName.Substring(sourceNodeName.IndexOf('\\'))
+                : "";
+
+            var sourceStructureNameWorking = sourceStructureName.Contains("\\")
+                ? sourceStructureName.Substring(sourceStructureName.IndexOf('\\'))
+                : "";
 
             if (!sourceNodeNameWorking.StartsWith(sourceStructureNameWorking, StringComparison.OrdinalIgnoreCase))
                 throw new Exception("The work item is not in the source node. Change your query so that only work items in the source node");
@@ -93,50 +98,13 @@ namespace MigrationTools.Enrichers
                 .TrimEnd('\\');
         }
 
-
         public string GetNewNodeName(string sourceNodeName, TfsNodeStructureType nodeStructureType,
-            string targetStructureName = null, string sourceStructureName = null)
+            string targetStructureName, string sourceStructureName)
         {
             Log.LogDebug("NodeStructureEnricher.GetNewNodeName({sourceNodeName}, {nodeStructureType})", sourceNodeName,
                 nodeStructureType.ToString());
-            var tStructureName = targetStructureName ??
-                                 NodeStructureTypeToLanguageSpecificName(_targetLanguageMaps, nodeStructureType);
-            var sStructureName = sourceStructureName ??
-                                 NodeStructureTypeToLanguageSpecificName(_sourceLanguageMaps, nodeStructureType);
-            // Replace project name with new name (if necessary) and inject nodePath (Area or Iteration) into path for node validation
-            string newNodeName;
-            if (_prefixProjectToNodes)
-            {
-                newNodeName = $@"{_targetProjectName}\{tStructureName}\{sourceNodeName}";
-            }
-            else
-            {
-                var regex = new Regex(Regex.Escape(_sourceProjectName));
-                if (sourceNodeName.StartsWith($@"{_sourceProjectName}\{sStructureName}\"))
-                    newNodeName = regex.Replace(sourceNodeName, _targetProjectName, 1);
-                else
-                    newNodeName = regex.Replace(sourceNodeName, $@"{_targetProjectName}\{tStructureName}", 1);
-            }
 
-            // Validate the node exists
-            if (!TargetNodeExists(newNodeName))
-            {
-                Log.LogWarning(
-                    "The Node '{newNodeName}' does not exist, leaving as '{newProjectName}'. This may be because it has been renamed or moved and no longer exists, or that you have not migrated the Node Structure yet",
-                    newNodeName, _targetProjectName);
-                newNodeName = _targetProjectName;
-            }
-
-            // Remove nodePath (Area or Iteration) from path for correct population in work item
-            if (newNodeName.StartsWith(_targetProjectName + '\\' + tStructureName + '\\'))
-                newNodeName = newNodeName.Remove(newNodeName.IndexOf($@"{nodeStructureType}\", StringComparison.Ordinal),
-                    $@"{nodeStructureType}\".Length);
-            else if (newNodeName.StartsWith(_targetProjectName + '\\' + tStructureName))
-                newNodeName = newNodeName.Remove(newNodeName.IndexOf($@"{nodeStructureType}", StringComparison.Ordinal),
-                    $@"{nodeStructureType}".Length);
-            newNodeName = newNodeName.Replace(@"\\", @"\");
-
-            return newNodeName;
+            return MappedNodeName(sourceNodeName, sourceStructureName, _targetProjectName, targetStructureName);
         }
 
         public override void ProcessorExecutionBegin(IProcessor processor)
