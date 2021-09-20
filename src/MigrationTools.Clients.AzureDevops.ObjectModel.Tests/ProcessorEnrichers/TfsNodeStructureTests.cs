@@ -91,6 +91,16 @@ namespace MigrationTools.ProcessorEnrichers.Tests
                     targetStructureName = @"Area\team\place\source",
 
                     expectedNodeName = @"Test Migration Project\team\place\source"
+                },
+                new()
+                {
+                    sourceNodeName = @"PartsUnlimited",
+                    sourceStructureName = @"Area\123",
+
+                    targetProjectName = "Test Migration Project",
+                    targetStructureName = @"Area\team\place\source",
+
+                    expectedNodeName = @"Test Migration Project\team\place\source"
                 }
             };
 
