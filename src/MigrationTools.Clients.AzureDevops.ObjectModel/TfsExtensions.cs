@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq;
 using Microsoft.TeamFoundation.WorkItemTracking.Client;
 using MigrationTools._EngineV1.Configuration;
 using MigrationTools._EngineV1.DataContracts;
@@ -59,6 +60,24 @@ namespace MigrationTools
             var workItem = (WorkItem)context.internalObject;
             Log.Debug("TfsExtensions::SaveToAzureDevOps: ChangedBy: {ChangedBy}, AuthorisedBy: {AuthorizedIdentity}", workItem.ChangedBy, workItem.Store.TeamProjectCollection.AuthorizedIdentity.DisplayName);
             var fails = workItem.Validate();
+
+            if (fails.Count > 0)
+            {
+                var failedFields = fails.ToArray().ToList().Select(x => (Field)x);
+
+                if (failedFields.Any(x => x.ReferenceName == "System.AreaPath"))
+                {
+                    workItem.Fields["System.AreaPath"].Value = workItem.Project.Name;
+                }
+
+                if (failedFields.Any(x => x.ReferenceName == "System.IterationPath"))
+                {
+                    workItem.Fields["System.IterationPath"].Value = workItem.Project.Name;
+                }
+
+                fails = workItem.Validate();
+            }
+
             if (fails.Count > 0)
             {
                 Log.Warning("Work Item is not ready to save as it has some invalid fields. This may not result in an error. Enable LogLevel as 'Debug' in the config to see more.");
@@ -71,6 +90,7 @@ namespace MigrationTools
                 Log.Debug("--------------------------------------------------------------------------------------------------------------------");
                 Log.Debug("--------------------------------------------------------------------------------------------------------------------");
             }
+
             Log.Verbose("TfsExtensions::SaveToAzureDevOps::Save()");
             workItem.Save();
             context.RefreshWorkItem();
