@@ -204,7 +204,7 @@ namespace MigrationTools.Enrichers
                 if (!ShouldCreateNode(parentPath, newNodeName)) continue;
 
                 NodeInfo targetNode;
-                if (treeType == "Iteration")
+                if (treeType.StartsWith("Iteration"))
                 {
                     DateTime? startDate = null;
                     DateTime? finishDate = null;
