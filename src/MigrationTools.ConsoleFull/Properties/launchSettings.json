@@ -12,6 +12,10 @@
       "commandName": "Project",
       "commandLineArgs": "execute -c configuration2.json"
     },
+    "execute3": {
+      "commandName": "Project",
+      "commandLineArgs": "execute -c configuration3.json"
+    },
     "init2": {
       "commandName": "Project",
       "commandLineArgs": "init -c configuration2.json --options Fullv2"

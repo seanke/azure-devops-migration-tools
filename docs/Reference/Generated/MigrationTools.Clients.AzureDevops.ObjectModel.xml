@@ -9,7 +9,7 @@
         </member>
         <member name="M:MigrationTools.Enrichers.TfsNodeStructure.ShouldCreateNode(Microsoft.TeamFoundation.Server.NodeInfo,System.String)">
             <summary>
-            Checks node-to-be-created with allowed BasePath's
+                Checks node-to-be-created with allowed BasePath's
             </summary>
             <param name="parentPath">Parent Node</param>
             <param name="newNodeName">Node to be created</param>
